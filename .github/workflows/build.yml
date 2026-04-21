@@ -40,4 +40,19 @@ jobs:
         nmake
     - name: test
       run: build/tests.exe
+  build-switch:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/d3fau4/nx-dev:latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: cmake
+      run: cmake -B build-switch -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-switch.cmake -DBUILD_SHARED_LIBS=OFF -DNO_TESTS=ON -DCMAKE_BUILD_TYPE=Release
+    - name: make
+      run: cmake --build build-switch --target juice-static
+    - name: upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: libjuice-switch
+        path: build-switch/libjuice-static.a
 
