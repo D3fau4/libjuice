@@ -15,7 +15,21 @@
 #include <time.h>
 
 // getrandom() is not available in Android NDK API < 28 and needs glibc >= 2.25
-#if defined(__linux__) && !defined(__ANDROID__) && (!defined(__GLIBC__) || __GLIBC__ > 2 || __GLIBC_MINOR__ >= 25)
+#if defined(__SWITCH__)
+
+#include <switch.h>
+
+static int random_bytes(void *buf, size_t size) {
+	splInitialize();
+	Result rc = splGetRandomBytes(buf, size);
+	splExit();
+	if (R_FAILED(rc)) {
+		return -1;
+	}
+	return 0;
+}
+
+#elif defined(__linux__) && !defined(__ANDROID__) && (!defined(__GLIBC__) || __GLIBC__ > 2 || __GLIBC_MINOR__ >= 25)
 
 #include <errno.h>
 #include <sys/random.h>

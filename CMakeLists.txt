@@ -93,8 +93,14 @@ set(FUZZER_SOURCES
 )
 source_group("Fuzzer Files" FILES "${FUZZER_SOURCES}")
 
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
+if(CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
+	# libnx provides pthreads and BSD sockets; no external Threads package needed
+	set(NINTENDO_SWITCH TRUE)
+	set(NO_TESTS TRUE)
+else()
+	set(THREADS_PREFER_PTHREAD_FLAG ON)
+	find_package(Threads REQUIRED)
+endif()
 
 add_library(juice ${LIBJUICE_SOURCES})
 set_target_properties(juice PROPERTIES VERSION ${PROJECT_VERSION})
@@ -104,7 +110,12 @@ target_include_directories(juice PUBLIC
 target_include_directories(juice PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/juice)
 target_include_directories(juice PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_compile_definitions(juice PRIVATE $<$<CONFIG:Release>:RELEASE=1>)
-target_link_libraries(juice PRIVATE Threads::Threads)
+if(NINTENDO_SWITCH)
+	target_include_directories(juice PRIVATE ${DEVKITPRO}/libnx/include)
+	target_link_libraries(juice PRIVATE ${DEVKITPRO}/libnx/lib/libnx.a)
+else()
+	target_link_libraries(juice PRIVATE Threads::Threads)
+endif()
 
 add_library(juice-static STATIC EXCLUDE_FROM_ALL ${LIBJUICE_SOURCES})
 set_target_properties(juice-static PROPERTIES VERSION ${PROJECT_VERSION})
@@ -114,7 +125,12 @@ target_include_directories(juice-static PUBLIC
 target_include_directories(juice-static PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/juice)
 target_include_directories(juice-static PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_compile_definitions(juice-static PRIVATE $<$<CONFIG:Release>:RELEASE=1>)
-target_link_libraries(juice-static PRIVATE Threads::Threads)
+if(NINTENDO_SWITCH)
+	target_include_directories(juice-static PRIVATE ${DEVKITPRO}/libnx/include)
+	target_link_libraries(juice-static PRIVATE ${DEVKITPRO}/libnx/lib/libnx.a)
+else()
+	target_link_libraries(juice-static PRIVATE Threads::Threads)
+endif()
 
 if(WIN32)
 	target_link_libraries(juice PRIVATE

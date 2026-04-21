@@ -21,7 +21,7 @@
 
 typedef struct registry_impl {
 	thread_t thread;
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__SWITCH__)
 	socket_t interrupt_sock;
 #else
 	int interrupt_pipe_out;
@@ -74,7 +74,7 @@ int conn_poll_registry_init(conn_registry_t *registry, udp_socket_config_t *conf
 		return -1;
 	}
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__SWITCH__)
 	udp_socket_config_t interrupt_config;
 	memset(&interrupt_config, 0, sizeof(interrupt_config));
 	interrupt_config.bind_address = "localhost";
@@ -110,7 +110,9 @@ int conn_poll_registry_init(conn_registry_t *registry, udp_socket_config_t *conf
 	return 0;
 
 error:
-#ifndef _WIN32
+#if defined(_WIN32) || defined(__SWITCH__)
+	closesocket(registry_impl->interrupt_sock);
+#else
 	close(registry_impl->interrupt_pipe_out);
 	close(registry_impl->interrupt_pipe_in);
 #endif
@@ -125,7 +127,7 @@ void conn_poll_registry_cleanup(conn_registry_t *registry) {
 	JLOG_VERBOSE("Waiting for connections thread");
 	thread_join(registry_impl->thread, NULL);
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__SWITCH__)
 	closesocket(registry_impl->interrupt_sock);
 #else
 	close(registry_impl->interrupt_pipe_out);
@@ -172,7 +174,7 @@ int conn_poll_prepare(conn_registry_t *registry, pfds_record_t *pfds, timestamp_
 	registry_impl_t *registry_impl = registry->impl;
 	struct pollfd *interrupt_pfd = pfds->pfds;
 	assert(interrupt_pfd);
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__SWITCH__)
 	interrupt_pfd->fd = registry_impl->interrupt_sock;
 #else
 	interrupt_pfd->fd = registry_impl->interrupt_pipe_in;
@@ -442,7 +444,7 @@ void conn_poll_change_tcp_state(juice_agent_t *agent, tcp_state_t state) {
 int conn_poll_process(conn_registry_t *registry, pfds_record_t *pfds) {
 	struct pollfd *interrupt_pfd = pfds->pfds;
 	if (interrupt_pfd->revents & POLLIN) {
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__SWITCH__)
 		char dummy;
 		addr_record_t src;
 		while (udp_recvfrom(interrupt_pfd->fd, &dummy, 1, &src) >= 0) {
@@ -591,7 +593,7 @@ int conn_poll_interrupt(juice_agent_t *agent) {
 	JLOG_VERBOSE("Interrupting connections thread");
 
 	char dummy = 0;
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__SWITCH__)
 	if (udp_sendto_self(registry_impl->interrupt_sock, &dummy, 0) < 0) {
 		if (sockerrno != SEAGAIN && sockerrno != SEWOULDBLOCK) {
 			JLOG_WARN("Failed to interrupt poll by triggering socket, errno=%d", sockerrno);

@@ -58,6 +58,49 @@ typedef ULONG nfds_t;
 #define SEMSGSIZE WSAEMSGSIZE
 #define SENETUNREACH WSAENETUNREACH
 
+#elif defined(__SWITCH__)
+
+// Nintendo Switch (libnx) - BSD socket service
+#include <switch.h>
+
+#include <arpa/inet.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <limits.h>
+#include <net/if.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <poll.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#define NO_IFADDRS
+#define NO_PMTUDISC
+
+typedef int socket_t;
+typedef int ctl_t;
+typedef int sockopt_t;
+#define sockerrno errno
+#define INVALID_SOCKET -1
+#define ioctlsocket ioctl
+#define closesocket close
+
+#define SEADDRINUSE EADDRINUSE
+#define SEINTR EINTR
+#define SEAGAIN EAGAIN
+#define SEACCES EACCES
+#define SEWOULDBLOCK EWOULDBLOCK
+#define SEINPROGRESS EINPROGRESS
+#define SECONNREFUSED ECONNREFUSED
+#define SECONNRESET ECONNRESET
+#define SENETRESET ENETRESET
+#define SEMSGSIZE EMSGSIZE
+#define SENETUNREACH ENETUNREACH
+
 #else // assume POSIX
 
 #include <arpa/inet.h>

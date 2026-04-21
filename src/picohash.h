@@ -19,6 +19,8 @@
 
 #ifdef _WIN32
 /* assume Windows is little endian */
+#elif defined __SWITCH__
+/* Nintendo Switch AArch64 is little endian */
 #elif defined __BIG_ENDIAN__
 #define _PICOHASH_BIG_ENDIAN
 #elif defined __LITTLE_ENDIAN__

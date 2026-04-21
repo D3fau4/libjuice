@@ -554,6 +554,41 @@ int udp_get_addrs(socket_t sock, addr_record_t *records, size_t count) {
 	freeifaddrs(ifas);
 
 #else // NO_IFADDRS defined
+#ifdef __SWITCH__
+	// libnx doesn't support SIOCGIFCONF. Use connected-socket trick to get local IPv4 address.
+	{
+		const char *dummy_host = "8.8.8.8";
+		const uint16_t dummy_port = 9;
+
+		struct sockaddr_in sin4;
+		memset(&sin4, 0, sizeof(sin4));
+		sin4.sin_family = AF_INET;
+		sin4.sin_port = htons(dummy_port);
+		inet_pton(AF_INET, dummy_host, &sin4.sin_addr);
+
+		socket_t tmp = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+		if (tmp != INVALID_SOCKET) {
+			if (connect(tmp, (const struct sockaddr *)&sin4, sizeof(sin4)) == 0) {
+				struct sockaddr_in local;
+				socklen_t local_len = sizeof(local);
+				if (getsockname(tmp, (struct sockaddr *)&local, &local_len) == 0 &&
+				    !addr_is_local((const struct sockaddr *)&local)) {
+					addr_set_port((struct sockaddr *)&local, port);
+					if (!has_duplicate_addr((const struct sockaddr *)&local, records, current - records)) {
+						++ret;
+						if (current != end) {
+							memcpy(&current->addr, &local, sizeof(local));
+							current->len = sizeof(local);
+							current->socktype = SOCK_DGRAM;
+							++current;
+						}
+					}
+				}
+			}
+			closesocket(tmp);
+		}
+	}
+#else
 	char buf[4096];
 	struct ifconf ifc;
 	memset(&ifc, 0, sizeof(ifc));
@@ -604,7 +639,8 @@ int udp_get_addrs(socket_t sock, addr_record_t *records, size_t count) {
 			}
 		}
 	}
-#endif
+#endif // !__SWITCH__
+#endif // NO_IFADDRS
 #endif
 
 	return ret;
